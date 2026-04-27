@@ -25,14 +25,8 @@ Type
         position : array[1..100] of position;
         direction : directions;
         size : integer;
+        speed : integer;
     end;
-
-Procedure clearScreen;
-begin
-    write(CSI, 3, 'J'); {Erase scrolling}
-    write(CSI, 2, 'J');
-    write(CSI, 'H'); {Return cursor to home position}
-end;
 
 Procedure hideCursor;
 begin
@@ -143,6 +137,7 @@ begin
         drawAt(fruit.x, fruit.y);
         write('þ');
         score := score + 10;
+        snake.speed := snake.speed + 5;
     end;
 end;
 
@@ -163,6 +158,7 @@ Begin
     snake1.position[1].y := LEVEL_Y_POSITION + (LEVEL_HEIGHT div 2);
     snake1.direction := north;
     snake1.size := 1;
+    snake1.speed := 0;
 
     {Set Up score}
     score := 0;
@@ -188,7 +184,7 @@ Begin
             drawScore(score);
             drawSnake(snake1);
 
-            sleep(100 - score);
+            sleep(150 - snake1.speed);
         end;
     end;
 End.

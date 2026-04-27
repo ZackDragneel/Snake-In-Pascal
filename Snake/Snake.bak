@@ -22,7 +22,7 @@ Type
     end;
 
     player = record
-        position : array[1..20] of position;
+        position : array[1..100] of position;
         direction : directions;
         size : integer;
     end;
@@ -188,7 +188,7 @@ Begin
             drawScore(score);
             drawSnake(snake1);
 
-            sleep(100 - score div 5);
+            sleep(100 - score);
         end;
     end;
 End.
