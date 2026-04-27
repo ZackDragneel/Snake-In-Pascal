@@ -4,8 +4,15 @@ Uses SysUtils, Windows;
 
 Const
     CSI = chr(27) + '['; {Control Sequence Introducer}
+
+    LEVEL_X_POSITION = 1;
+    LEVEL_Y_POSITION = 1;
+
     LEVEL_WIDTH = 51;
     LEVEL_HEIGHT = 33;
+
+    GLOBAL_LEVEL_WIDTH = (LEVEL_X_POSITION + LEVEL_WIDTH) - 1; {Width and height relative to the origin of the console (1, 1)}
+    GLOBAL_LEVEL_HEIGHT = (LEVEL_Y_POSITION + LEVEL_HEIGHT - 1);
 
 Type
     directions = (north, south, east, west);
@@ -40,15 +47,20 @@ end;
 Procedure drawRect(x, y, width, height: integer);
 var
     col, line: integer;
-    absoluteWidth, absoluteHeight: integer;
 
 begin
-    absoluteWidth := (x + width) - 1;
-    absoluteHeight := (y + height) - 1;
-    for col := x to absoluteWidth do begin
-        for line := y to absoluteHeight do begin
+    for col := x to width do begin
+        for line := y to height do begin
             drawAt(col, line);
-            if (col = x) or (col = absoluteWidth) or (line = y) or (line = absoluteHeight) then write('x');
+            if ((col = x) or (col = width)) and ((line = y) or (line = height)) then begin {if it's a corner}
+                if (col = x) then
+                        if (line = y) then write('É') else write('È');
+                if (col = width) then
+                        if (line = y) then write('»') else write('¼');
+            end else begin
+                if (col = x) or (col = width) then write ('º')
+                else if (line = y) or (line = height) then write ('Í'); {Draw sides}
+            end;
         end;
     end;
 end;
@@ -95,7 +107,10 @@ var
     i : integer;
 begin
     collision := false;
-    if (snake.position[1].x >= LEVEL_WIDTH) or (snake.position[1].y >= LEVEL_HEIGHT) or (snake.position[1].x <= 1) or (snake.position[1].y <= 1) then collision := true;
+    if (snake.position[1].x >= GLOBAL_LEVEL_WIDTH) or
+       (snake.position[1].y >= GLOBAL_LEVEL_HEIGHT) or
+       (snake.position[1].x <= LEVEL_X_POSITION) or
+       (snake.position[1].y <= LEVEL_Y_POSITION) then collision := true;
 
     if (snake.size > 2) then begin
         for i := 2 to snake.size do begin
@@ -114,25 +129,38 @@ end;
 
 Procedure drawScore (score : integer);
 begin
-    drawAt(LEVEL_WIDTH + 3, 1);
+    drawAt(GLOBAL_LEVEL_WIDTH + 3, LEVEL_Y_POSITION);
     write('Score = ', score);
+end;
+
+Procedure updateFruit (var fruit : position; var snake : player; var score : integer);
+begin
+    if (fruit.x = snake.position[1].x) and (fruit.y = snake.position[1].y) then begin
+        addSegment(snake);
+        randomize;
+        fruit.x := random(GLOBAL_LEVEL_WIDTH - 1 - LEVEL_X_POSITION) + LEVEL_X_POSITION + 1;
+        fruit.y := random(GLOBAL_LEVEL_HEIGHT - 1 - LEVEL_Y_POSITION) + LEVEL_Y_POSITION + 1;
+        drawAt(fruit.x, fruit.y);
+        write('þ');
+        score := score + 10;
+    end;
 end;
 
 Var
     snake1 : player;
     startingPos : position;
-    fruit : array [1..20] of position;
+    fruit : position;
     score : integer;
     i : integer;
 
 Begin
     {Hide cursor and draw level}
     hideCursor;
-    drawRect(1, 1, LEVEL_WIDTH, LEVEL_HEIGHT);
+    drawRect(LEVEL_X_POSITION, LEVEL_Y_POSITION, GLOBAL_LEVEL_WIDTH, GLOBAL_LEVEL_HEIGHT);
 
     {Set up snake starting position and direction}
-    snake1.position[1].x := 1 + (LEVEL_WIDTH div 2);
-    snake1.position[1].y := 1 + (LEVEL_HEIGHT div 2);
+    snake1.position[1].x := LEVEL_X_POSITION + (LEVEL_WIDTH div 2);
+    snake1.position[1].y := LEVEL_Y_POSITION + (LEVEL_HEIGHT div 2);
     snake1.direction := north;
     snake1.size := 1;
 
@@ -141,12 +169,10 @@ Begin
 
     {Set Up starting fruit}
     randomize;
-    for i := 1 to 20 do begin
-        fruit[i].x := random(LEVEL_WIDTH);
-        fruit[i].y := random(LEVEL_HEIGHT);
-        drawAt(fruit[i].x, fruit[i].y);
-        write('x');
-    end;
+    fruit.x := random(GLOBAL_LEVEL_WIDTH - 1 - LEVEL_X_POSITION) + LEVEL_X_POSITION + 1;
+    fruit.y := random(GLOBAL_LEVEL_HEIGHT - 1 - LEVEL_Y_POSITION) + LEVEL_Y_POSITION + 1;
+    drawAt(fruit.x, fruit.y);
+    write('þ');
 
     {Start of game loop}
     while true do begin
@@ -157,21 +183,12 @@ Begin
             write(' ');
 
             updateSnake (snake1);
-
-            for i := 1 to 20 do begin
-                if (fruit[i].x = snake1.position[1].x) and (fruit[i].y = snake1.position[1].y) then begin
-                    drawAt(fruit[i].x, fruit[i].y);
-                    addSegment(snake1);
-                    fruit[i].x := 0;
-                    fruit[i].y := 0;
-                    score := score + 10;
-                end;
-            end;
+            updateFruit (fruit, snake1, score);
 
             drawScore(score);
             drawSnake(snake1);
 
-            sleep(80);
+            sleep(100 - score div 5);
         end;
     end;
 End.
